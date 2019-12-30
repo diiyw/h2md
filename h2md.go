@@ -1,0 +1,144 @@
+package h2md
+
+import (
+	"bytes"
+	"golang.org/x/net/html"
+	"strconv"
+	"strings"
+)
+
+type H2MD struct {
+	*html.Node
+	replacer map[string]func(val string) string
+}
+
+func NewH2MD(htmlText string) (*H2MD, error) {
+	node, err := html.Parse(strings.NewReader(htmlText))
+	if err == nil {
+		return &H2MD{node, make(map[string]func(val string) string)}, nil
+	}
+	return nil, err
+}
+
+func NewH2MDFromNode(node *html.Node) (*H2MD, error) {
+	return &H2MD{node, make(map[string]func(val string) string)}, nil
+}
+
+func (h *H2MD) Replace(attr string, r func(val string) string) {
+	h.replacer[attr] = r
+}
+
+func (h *H2MD) Text() string {
+	var buf bytes.Buffer
+
+	var f func(*html.Node)
+
+	getAttr := func(name string, n *html.Node) string {
+		for _, attr := range n.Attr {
+			if name == attr.Key {
+				if r, ok := h.replacer[name]; ok {
+					return r(attr.Val)
+				}
+				return attr.Val
+			}
+		}
+		return ""
+	}
+
+	var tableColumn int
+
+	var needSplit = true
+
+	f = func(n *html.Node) {
+		if n.Type == html.TextNode {
+			var data string
+			if n.Parent != nil {
+				switch n.Parent.Data {
+				case "a":
+					data = "[" + n.Data + "](" + getAttr("href", n.Parent) + ")"
+				case "strong", "b":
+					data = "**" + n.Data + "**"
+				case "del":
+					data = "~~" + n.Data + "~~"
+				case "h1", "h2", "h3", "h4", "h5", "h6":
+					j, _ := strconv.Atoi(n.Parent.Data[1:])
+					title := ""
+					for i := 0; i < j; i++ {
+						title += "#"
+					}
+					data += title + " " + n.Data
+				case "blockquote":
+					if n.PrevSibling == nil {
+						data += "> "
+					}
+					data += n.Data
+				case "code":
+					lang := getAttr("class", n.Parent)
+					var newline string
+					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
+						class := getAttr("class", n.Parent.Parent)
+						newline = "\n"
+						lang = strings.ReplaceAll(class, "hljs ", "")
+					}
+					if lang != "" {
+						newline = "\n"
+					}
+					data = "```" + lang + newline + n.Data + newline + "```" + newline
+				case "li":
+					if n.PrevSibling == nil {
+						data += "- "
+					}
+					data += n.Data
+				case "i":
+					data = "*" + n.Data + "*"
+				case "th":
+					tableColumn++
+					data = n.Data + " | "
+				case "td":
+					if tableColumn > 0 && needSplit {
+						buf.WriteString("\n| ")
+						for i := 0; i < tableColumn; i++ {
+							buf.WriteString("---- | ")
+						}
+						buf.WriteString("\n| ")
+						needSplit = false
+					}
+					tableColumn--
+					data = n.Data + " | "
+					if tableColumn == 0 {
+						data += "\n"
+					}
+				default:
+					data = n.Data
+				}
+			}
+			buf.WriteString(data)
+		}
+		if n.Type == html.ElementNode {
+			switch n.Data {
+			case "img":
+				data := "![" + getAttr("alt", n) + "](" + getAttr("src", n) + ")"
+				buf.WriteString(data)
+			case "ul":
+				if n.Parent != nil && n.Parent.Data == "li" {
+					buf.WriteString("\n	")
+				}
+			case "blockquote":
+				if n.Parent != nil && n.Parent.Data == "blockquote" {
+					buf.WriteString("\n>")
+				}
+			case "table":
+				buf.WriteString("| ")
+			}
+		}
+		if n.FirstChild != nil {
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				f(c)
+			}
+		}
+	}
+
+	f(h.Node)
+
+	return buf.String()
+}
