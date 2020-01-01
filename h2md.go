@@ -9,41 +9,44 @@ import (
 
 type H2MD struct {
 	*html.Node
-	replacer map[string]func(val string) string
+	replacer map[string]func(val string, n *html.Node) string
 }
 
 func NewH2MD(htmlText string) (*H2MD, error) {
 	node, err := html.Parse(strings.NewReader(htmlText))
 	if err == nil {
-		return &H2MD{node, make(map[string]func(val string) string)}, nil
+		return &H2MD{node, make(map[string]func(val string, n *html.Node) string)}, nil
 	}
 	return nil, err
 }
 
 func NewH2MDFromNode(node *html.Node) (*H2MD, error) {
-	return &H2MD{node, make(map[string]func(val string) string)}, nil
+	return &H2MD{node, make(map[string]func(val string, n *html.Node) string)}, nil
 }
 
-func (h *H2MD) Replace(attr string, r func(val string) string) {
+// Replace Replace element attribute value
+func (h *H2MD) Replace(attr string, r func(val string, n *html.Node) string) {
 	h.replacer[attr] = r
 }
 
+// Attr Return the element attribute
+func (h *H2MD) Attr(name string, n *html.Node) string {
+	for _, attr := range n.Attr {
+		if name == attr.Key {
+			if r, ok := h.replacer[name]; ok {
+				return r(attr.Val, n)
+			}
+			return attr.Val
+		}
+	}
+	return ""
+}
+
+// Text return the markdown content
 func (h *H2MD) Text() string {
 	var buf bytes.Buffer
 
 	var f func(*html.Node)
-
-	getAttr := func(name string, n *html.Node) string {
-		for _, attr := range n.Attr {
-			if name == attr.Key {
-				if r, ok := h.replacer[name]; ok {
-					return r(attr.Val)
-				}
-				return attr.Val
-			}
-		}
-		return ""
-	}
 
 	var tableColumn int
 
@@ -55,7 +58,7 @@ func (h *H2MD) Text() string {
 			if n.Parent != nil {
 				switch n.Parent.Data {
 				case "a":
-					data = "[" + n.Data + "](" + getAttr("href", n.Parent) + ")"
+					data = "[" + n.Data + "](" + h.Attr("href", n.Parent) + ")"
 				case "strong", "b":
 					data = "**" + n.Data + "**"
 				case "del":
@@ -73,12 +76,14 @@ func (h *H2MD) Text() string {
 					}
 					data += n.Data
 				case "code":
-					lang := getAttr("class", n.Parent)
+					lang := h.Attr("class", n.Parent)
 					var newline string
 					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
-						class := getAttr("class", n.Parent.Parent)
+						class := h.Attr("class", n.Parent.Parent)
 						newline = "\n"
 						lang = strings.ReplaceAll(class, "hljs ", "")
+						lang = strings.ReplaceAll(lang, "highlight ", "")
+						lang = strings.ReplaceAll(lang, "highlight-source-", "")
 					}
 					if lang != "" {
 						newline = "\n"
@@ -117,7 +122,7 @@ func (h *H2MD) Text() string {
 		if n.Type == html.ElementNode {
 			switch n.Data {
 			case "img":
-				data := "![" + getAttr("alt", n) + "](" + getAttr("src", n) + ")"
+				data := "![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")"
 				buf.WriteString(data)
 			case "ul":
 				if n.Parent != nil && n.Parent.Data == "li" {
