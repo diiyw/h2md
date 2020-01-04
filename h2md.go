@@ -7,11 +7,13 @@ import (
 	"strings"
 )
 
+// H2MD H2MD struct
 type H2MD struct {
 	*html.Node
 	replacer map[string]func(val string, n *html.Node) string
 }
 
+// NewH2MD create H2MD with html text
 func NewH2MD(htmlText string) (*H2MD, error) {
 	node, err := html.Parse(strings.NewReader(htmlText))
 	if err == nil {
@@ -20,6 +22,7 @@ func NewH2MD(htmlText string) (*H2MD, error) {
 	return nil, err
 }
 
+//NewH2MDFromNode create H2MD with html node
 func NewH2MDFromNode(node *html.Node) (*H2MD, error) {
 	return &H2MD{node, make(map[string]func(val string, n *html.Node) string)}, nil
 }
@@ -121,6 +124,8 @@ func (h *H2MD) Text() string {
 		}
 		if n.Type == html.ElementNode {
 			switch n.Data {
+			case "hr":
+				buf.WriteString("---\n")
 			case "img":
 				data := "![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")"
 				buf.WriteString(data)

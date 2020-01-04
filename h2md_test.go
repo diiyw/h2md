@@ -25,6 +25,7 @@ func TestNewH2MD(t *testing.T) {
 		{"<b>List</b>", "**List**"},
 		{"<strong>strong</strong>", "**strong**"},
 		{"<i>List</i>", "*List*"},
+		{"<hr>", "---\n"},
 		{"<code>code</code>", "```code```"},
 		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "```javascript\ncode\n```\n"},
 		{"<blockquote>blockquote</blockquote>", "> blockquote"},

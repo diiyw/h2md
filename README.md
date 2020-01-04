@@ -20,6 +20,7 @@ if err == nil {
 - a
 - b
 - i
+- hr
 - strong
 - del
 - img
