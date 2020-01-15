@@ -139,6 +139,8 @@ func (h *H2MD) Text() string {
 				}
 			case "table":
 				buf.WriteString("| ")
+			case "p":
+				buf.WriteString("\n")
 			}
 		}
 		if n.FirstChild != nil {
