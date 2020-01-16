@@ -77,7 +77,7 @@ func (h *H2MD) Text() string {
 					if n.PrevSibling == nil {
 						data += "> "
 					}
-					data += n.Data
+					data += n.Data + "\n"
 				case "code":
 					lang := h.Attr("class", n.Parent)
 					var newline string
@@ -139,8 +139,6 @@ func (h *H2MD) Text() string {
 				}
 			case "table":
 				buf.WriteString("| ")
-			case "p":
-				buf.WriteString("\n")
 			}
 		}
 		if n.FirstChild != nil {
