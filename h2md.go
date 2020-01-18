@@ -53,7 +53,9 @@ func (h *H2MD) Text() string {
 
 	var tableColumn int
 
-	var needSplit = true
+	var spitedTable bool
+
+	var tdCounter int
 
 	f = func(n *html.Node) {
 		if n.Type == html.TextNode {
@@ -103,21 +105,23 @@ func (h *H2MD) Text() string {
 					tableColumn++
 					data = n.Data + " | "
 				case "td":
-					if tableColumn > 0 && needSplit {
+					if !spitedTable {
 						buf.WriteString("\n| ")
 						for i := 0; i < tableColumn; i++ {
 							buf.WriteString("---- | ")
 						}
 						buf.WriteString("\n| ")
-						needSplit = false
+						spitedTable = true
 					}
-					tableColumn--
-					data = n.Data + " | "
-					if tableColumn == 0 {
-						data += "\n"
+					tdCounter++
+					if tdCounter == tableColumn {
+						data = n.Data + " | "
+						tdCounter = 0
+						break
 					}
-				default:
 					data = n.Data
+				default:
+					data = skipNewline(n)
 				}
 			}
 			buf.WriteString(data)
@@ -138,7 +142,11 @@ func (h *H2MD) Text() string {
 					buf.WriteString("\n>")
 				}
 			case "table":
-				buf.WriteString("| ")
+				buf.WriteString("\n| ")
+			case "td":
+				if spitedTable {
+					buf.WriteString("| ")
+				}
 			}
 		}
 		if n.FirstChild != nil {
@@ -151,4 +159,19 @@ func (h *H2MD) Text() string {
 	f(h.Node)
 
 	return buf.String()
+}
+
+func skipNewline(n *html.Node) string {
+	var trimNewline = []string{
+		"table",
+		"tr",
+		"th",
+		"thead",
+	}
+	for _, el := range trimNewline {
+		if n.Parent != nil && n.Parent.Data == el {
+			return ""
+		}
+	}
+	return n.Data
 }
