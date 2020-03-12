@@ -121,7 +121,7 @@ func (h *H2MD) Text() string {
 					}
 					data = n.Data
 				default:
-					data = skipNewline(n)
+					data = skipInvalidString(n)
 				}
 			}
 			buf.WriteString(data)
@@ -147,6 +147,8 @@ func (h *H2MD) Text() string {
 				if spitedTable {
 					buf.WriteString("| ")
 				}
+			case "p","li":
+				buf.WriteString("\n")
 			}
 		}
 		if n.FirstChild != nil {
@@ -161,7 +163,7 @@ func (h *H2MD) Text() string {
 	return buf.String()
 }
 
-func skipNewline(n *html.Node) string {
+func skipInvalidString(n *html.Node) string {
 	var trimNewline = []string{
 		"table",
 		"tr",
