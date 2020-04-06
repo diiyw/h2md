@@ -84,13 +84,13 @@ func (h *H2MD) Text() string {
 					lang := h.Attr("class", n.Parent)
 					var newline string
 					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
-						class := h.Attr("class", n.Parent.Parent)
+						lang = h.Attr("class", n.Parent.Parent)
 						newline = "\n"
-						lang = strings.ReplaceAll(class, "hljs ", "")
-						lang = strings.ReplaceAll(lang, "highlight ", "")
-						lang = strings.ReplaceAll(lang, "highlight-source-", "")
-						lang = strings.ReplaceAll(lang, "language-", "")
 					}
+					lang = strings.ReplaceAll(lang, "hljs ", "")
+					lang = strings.ReplaceAll(lang, "highlight ", "")
+					lang = strings.ReplaceAll(lang, "highlight-source-", "")
+					lang = strings.ReplaceAll(lang, "language-", "")
 					if lang != "" {
 						newline = "\n"
 					}
