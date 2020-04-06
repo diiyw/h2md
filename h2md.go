@@ -81,18 +81,20 @@ func (h *H2MD) Text() string {
 					}
 					data += n.Data + "\n"
 				case "code":
-					if n.FirstChild == nil {
-						data = "```" + strings.TrimSpace(n.Data) + "```"
-					} else {
-						lang := h.Attr("class", n.Parent)
-						if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
-							class := h.Attr("class", n.Parent.Parent)
-							lang = strings.ReplaceAll(class, "hljs ", "")
-							lang = strings.ReplaceAll(lang, "highlight ", "")
-							lang = strings.ReplaceAll(lang, "highlight-source-", "")
-						}
-						data = "```" + lang + "\r" + n.Data + "\n```\n"
+					lang := h.Attr("class", n.Parent)
+					var newline string
+					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
+						class := h.Attr("class", n.Parent.Parent)
+						newline = "\n"
+						lang = strings.ReplaceAll(class, "hljs ", "")
+						lang = strings.ReplaceAll(lang, "highlight ", "")
+						lang = strings.ReplaceAll(lang, "highlight-source-", "")
+						lang = strings.ReplaceAll(lang, "language-", "")
 					}
+					if lang != "" {
+						newline = "\n"
+					}
+					data = "```" + lang + newline + n.Data + newline + "```" + newline
 				case "li":
 					if n.PrevSibling == nil {
 						data += "- "
