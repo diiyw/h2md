@@ -81,19 +81,18 @@ func (h *H2MD) Text() string {
 					}
 					data += n.Data + "\n"
 				case "code":
-					lang := h.Attr("class", n.Parent)
-					var newline string
-					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
-						class := h.Attr("class", n.Parent.Parent)
-						newline = "\n"
-						lang = strings.ReplaceAll(class, "hljs ", "")
-						lang = strings.ReplaceAll(lang, "highlight ", "")
-						lang = strings.ReplaceAll(lang, "highlight-source-", "")
+					if n.FirstChild == nil {
+						data = "```" + strings.TrimSpace(n.Data) + "```"
+					} else {
+						lang := h.Attr("class", n.Parent)
+						if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
+							class := h.Attr("class", n.Parent.Parent)
+							lang = strings.ReplaceAll(class, "hljs ", "")
+							lang = strings.ReplaceAll(lang, "highlight ", "")
+							lang = strings.ReplaceAll(lang, "highlight-source-", "")
+						}
+						data = "```" + lang + "\r" + n.Data + "\n```\n"
 					}
-					if lang != "" {
-						newline = "\n"
-					}
-					data = "```" + lang + newline + n.Data + newline + "```" + newline
 				case "li":
 					if n.PrevSibling == nil {
 						data += "- "
@@ -147,7 +146,16 @@ func (h *H2MD) Text() string {
 				if spitedTable {
 					buf.WriteString("| ")
 				}
-			case "p","li":
+			case "pre":
+				if n.FirstChild != nil && n.FirstChild.Data != "code"{
+					buf.WriteString("```\n")
+					for c := n.FirstChild; c != nil; c = c.NextSibling {
+						f(c)
+					}
+					n = n.NextSibling
+					buf.WriteString("\n```")
+				}
+			case "p", "li":
 				buf.WriteString("\n")
 			}
 		}

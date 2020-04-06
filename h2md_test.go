@@ -132,3 +132,14 @@ func TestParseTable(t *testing.T) {
 	}
 	fmt.Println(h.Text())
 }
+
+func TestPre(t *testing.T) {
+	var pre = `<div class="cnblogs_Highlighter">
+<pre>echo 1;</pre>
+</div>`
+	h, err := NewH2MD(pre)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(h.Text())
+}
