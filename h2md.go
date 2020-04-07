@@ -51,117 +51,137 @@ func (h *H2MD) Text() string {
 
 	var f func(*html.Node)
 
-	var tableColumn int
-
-	var spitedTable bool
-
-	var tdCounter int
+	var (
+		ulLevel         = -1
+		blockquoteLevel = 0
+		tdLevel         = 0
+		tableSpited     = false
+		skipNewline     = true
+	)
 
 	f = func(n *html.Node) {
 		if n.Type == html.TextNode {
-			var data string
-			if n.Parent != nil {
-				switch n.Parent.Data {
-				case "a":
-					data = "[" + n.Data + "](" + h.Attr("href", n.Parent) + ")"
-				case "strong", "b":
-					data = "**" + n.Data + "**"
-				case "del":
-					data = "~~" + n.Data + "~~"
-				case "h1", "h2", "h3", "h4", "h5", "h6":
-					j, _ := strconv.Atoi(n.Parent.Data[1:])
-					title := ""
-					for i := 0; i < j; i++ {
-						title += "#"
-					}
-					data += title + " " + n.Data
-				case "blockquote":
-					if n.PrevSibling == nil {
-						data += "> "
-					}
-					data += n.Data + "\n"
-				case "code":
-					lang := h.Attr("class", n.Parent)
-					var newline string
-					if lang == "" && n.Parent.Parent != nil && n.Parent.Parent.Data == "pre" {
-						lang = h.Attr("class", n.Parent.Parent)
-						newline = "\n"
-					}
-					lang = strings.ReplaceAll(lang, "hljs ", "")
-					lang = strings.ReplaceAll(lang, "highlight ", "")
-					lang = strings.ReplaceAll(lang, "highlight-source-", "")
-					lang = strings.ReplaceAll(lang, "language-", "")
-					if lang != "" {
-						newline = "\n"
-					}
-					data = "```" + lang + newline + n.Data + newline + "```" + newline
-				case "li":
-					if n.PrevSibling == nil {
-						data += "- "
-					}
-					data += n.Data
-				case "i":
-					data = "*" + n.Data + "*"
-				case "th":
-					tableColumn++
-					data = n.Data + " | "
-				case "td":
-					if !spitedTable {
-						buf.WriteString("\n| ")
-						for i := 0; i < tableColumn; i++ {
-							buf.WriteString("---- | ")
-						}
-						buf.WriteString("\n| ")
-						spitedTable = true
-					}
-					tdCounter++
-					if tdCounter == tableColumn {
-						data = n.Data + " | "
-						tdCounter = 0
-						break
-					}
-					data = n.Data
-				default:
-					data = skipInvalidString(n)
-				}
+			if skipNewline {
+				n.Data = strings.Trim(n.Data, "\n")
 			}
-			buf.WriteString(data)
+			buf.WriteString(n.Data)
 		}
 		if n.Type == html.ElementNode {
 			switch n.Data {
+			case "a":
+				if n.FirstChild != nil {
+					buf.WriteString("[" + n.FirstChild.Data + "](" + h.Attr("href", n) + ")")
+				}
+				n = n.NextSibling
+			case "i":
+				if n.FirstChild != nil {
+					buf.WriteString("*" + n.FirstChild.Data + "*")
+				}
+				n = n.NextSibling
 			case "hr":
 				buf.WriteString("---\n")
+			case "strong", "b":
+				buf.WriteString("**")
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
+				}
+				n = n.NextSibling
+				buf.WriteString("**")
+			case "del":
+				buf.WriteString("~~" + n.Data + "~~")
+			case "h1", "h2", "h3", "h4", "h5", "h6":
+				buf.WriteString("\n")
+				j, _ := strconv.Atoi(n.Data[1:])
+				title := ""
+				for i := 0; i < j; i++ {
+					title += "#"
+				}
+				buf.WriteString(title)
+				buf.WriteString(" ")
 			case "img":
 				data := "![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")"
 				buf.WriteString(data)
-			case "ul":
-				if n.Parent != nil && n.Parent.Data == "li" {
-					buf.WriteString("\n	")
+			case "code":
+				buf.WriteString("```")
+				skipNewline = false
+				lang := h.Attr("class", n)
+				var newline = ""
+				if lang == "" && n.Parent != nil && n.Parent.Data == "pre" {
+					lang = h.Attr("class", n.Parent)
+					newline = "\n"
 				}
+				lang = strings.ReplaceAll(lang, "hljs ", "")
+				lang = strings.ReplaceAll(lang, "highlight ", "")
+				lang = strings.ReplaceAll(lang, "highlight-source-", "")
+				lang = strings.ReplaceAll(lang, "language-", "")
+				if lang != "" {
+					newline = "\n"
+				}
+				buf.WriteString(lang)
+				buf.WriteString(newline)
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
+				}
+				n = n.NextSibling
+				skipNewline = true
+				buf.WriteString(newline + "```" + newline)
+			case "ul", "ol":
+				ulLevel++
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
+				}
+				n = n.NextSibling
+				ulLevel--
+				buf.WriteString("\n")
+			case "li":
+				buf.WriteString("\n")
+				if ulLevel > 0 {
+					buf.WriteString(strings.Repeat("	", ulLevel))
+				}
+				buf.WriteString("- ")
 			case "blockquote":
-				if n.Parent != nil && n.Parent.Data == "blockquote" {
-					buf.WriteString("\n>")
+				blockquoteLevel++
+				buf.WriteString("\n")
+				buf.WriteString(strings.Repeat(">", blockquoteLevel))
+				buf.WriteString(" ")
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
 				}
-			case "table":
+				n = n.NextSibling
+				blockquoteLevel--
+				if blockquoteLevel == 0 {
+					buf.WriteString("\n")
+				}
+			case "tr":
+				if tdLevel > 0 && !tableSpited {
+					buf.WriteString("\n| ")
+					buf.WriteString(strings.Repeat("---- | ", tdLevel))
+					tdLevel = 0
+					tableSpited = true
+				}
 				buf.WriteString("\n| ")
-			case "td":
-				if spitedTable {
-					buf.WriteString("| ")
+			case "td", "th":
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
 				}
+				n = n.LastChild
+				tdLevel++
+				buf.WriteString(" | ")
 			case "pre":
-				if n.FirstChild != nil && n.FirstChild.Data != "code"{
+				buf.WriteString("\n")
+				if n.FirstChild != nil && n.FirstChild.Data != "code" {
+					skipNewline = false
 					buf.WriteString("```\n")
 					for c := n.FirstChild; c != nil; c = c.NextSibling {
 						f(c)
 					}
 					n = n.NextSibling
-					buf.WriteString("\n```")
+					skipNewline = true
+					buf.WriteString("\n```\n")
 				}
-			case "p", "li":
-				buf.WriteString("\n")
 			}
 		}
-		if n.FirstChild != nil {
+		if n != nil && n.FirstChild != nil {
 			for c := n.FirstChild; c != nil; c = c.NextSibling {
 				f(c)
 			}
@@ -171,19 +191,4 @@ func (h *H2MD) Text() string {
 	f(h.Node)
 
 	return buf.String()
-}
-
-func skipInvalidString(n *html.Node) string {
-	var trimNewline = []string{
-		"table",
-		"tr",
-		"th",
-		"thead",
-	}
-	for _, el := range trimNewline {
-		if n.Parent != nil && n.Parent.Data == el {
-			return ""
-		}
-	}
-	return n.Data
 }

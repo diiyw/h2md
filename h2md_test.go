@@ -10,27 +10,30 @@ func TestNewH2MD(t *testing.T) {
 		text   string
 		expect string
 	}{
-		{"<h1>Title 1</h1>", "# Title 1"},
-		{"<h2>Title 2</h2>", "## Title 2"},
-		{"<h3>Title 3</h3>", "### Title 3"},
-		{"<h4>Title 4</h4>", "#### Title 4"},
-		{"<h5>Title 5</h5>", "##### Title 5"},
-		{"<h6>Title 6</h6>", "###### Title 6"},
+		{"<h1>Title 1</h1>", "\n# Title 1"},
+		{"<h2>Title 2</h2>", "\n## Title 2"},
+		{"<h3>Title 3</h3>", "\n### Title 3"},
+		{"<h4>Title 4</h4>", "\n#### Title 4"},
+		{"<h5>Title 5</h5>", "\n##### Title 5"},
+		{"<h6>Title 6</h6>", "\n###### Title 6"},
 
-		{"<li>List</li>", "- List"},
-		{"<li>List <a href=\"xxx.com\">link</a></li>", "- List [link](xxx.com)"},
-		{"<li>List <strong>strong</strong></li>", "- List **strong**"},
+		{"<ul><li>List</li></ul>", "\n- List\n"},
+		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List [link](xxx.com)\n"},
+		{"<ul><li>List <strong>strong</strong></li></ul>", "\n- List **strong**\n"},
 
-		{"<li>List<ul><li>sub list</li><ul></li>", "- List\n	- sub list"},
-
+		{"<ul><li>List<ul><li>sub list</li></ul></li></ul>", "\n- List\n	- sub list\n\n"},
+		{
+			"<ul><li>List<ul><li>sub list</li><li>sub2 list</li></ul></li></ul>",
+			"\n- List\n	- sub list\n	- sub2 list\n\n",
+		},
 		{"<b>List</b>", "**List**"},
 		{"<strong>strong</strong>", "**strong**"},
 		{"<i>List</i>", "*List*"},
 		{"<hr>", "---\n"},
 		{"<code>code</code>", "```code```"},
-		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "```javascript\ncode\n```\n"},
-		{"<blockquote>blockquote</blockquote>", "> blockquote\n"},
-		{"<blockquote>blockquote<blockquote>sub blockquote</blockquote></blockquote>", "> blockquote\n\n>> sub blockquote\n"},
+		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "\n```javascript\ncode\n```\n"},
+		{"<blockquote>blockquote</blockquote>", "\n> blockquote\n"},
+		{"<blockquote>blockquote<blockquote>sub blockquote</blockquote></blockquote>", "\n> blockquote\n>> sub blockquote\n"},
 
 		{"<a href=\"xxx.com\">link</a>", "[link](xxx.com)"},
 		{"<img src=\"xxx.jpg\" alt=\"image\"/>", "![image](xxx.jpg)"},
@@ -39,7 +42,7 @@ func TestNewH2MD(t *testing.T) {
 		{"<table><tr><th>table header</th><th>table header 1</th></tr></table>", "\n| table header | table header 1 | "},
 		{
 			"<table><tr><th>table header</th><th>table header 1</th></tr><tr><td>table data</td><td>table data 1</td></tr></table>",
-			"\n| table header | table header 1 | \n| ---- | ---- | \n| table data| table data 1 | ",
+			"\n| table header | table header 1 | \n| ---- | ---- | \n| table data | table data 1 | ",
 		},
 	}
 
@@ -48,8 +51,9 @@ func TestNewH2MD(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if h.Text() != htmlText.expect {
-			t.Errorf("Expect \"%s\" but got \"%s\"", htmlText.expect, h.Text())
+		text := h.Text()
+		if text != htmlText.expect {
+			t.Errorf("Expect \"%s\" but got \"%s\"", htmlText.expect, text)
 		}
 	}
 }
@@ -127,17 +131,6 @@ func TestParseTable(t *testing.T) {
 </tbody>
 </table>`
 	h, err := NewH2MD(table)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(h.Text())
-}
-
-func TestPre(t *testing.T) {
-	var pre = `<div class="cnblogs_Highlighter">
-<pre>echo 1;</pre>
-</div>`
-	h, err := NewH2MD(pre)
 	if err != nil {
 		t.Error(err)
 	}
