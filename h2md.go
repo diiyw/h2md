@@ -85,7 +85,7 @@ func (h *H2MD) Text() string {
 				for c := n.FirstChild; c != nil; c = c.NextSibling {
 					f(c)
 				}
-				n = n.NextSibling
+				n = n.LastChild
 				buf.WriteString("**")
 			case "del":
 				buf.WriteString("~~" + n.Data + "~~")

@@ -16,7 +16,7 @@ func TestNewH2MD(t *testing.T) {
 		{"<h4>Title 4</h4>", "\n#### Title 4\n"},
 		{"<h5>Title 5</h5>", "\n##### Title 5\n"},
 		{"<h6>Title 6</h6>", "\n###### Title 6\n"},
-
+		{`<h1><strong>1</strong><strong>、前言</strong></h1>`, "\n# **1、前言**\n"},
 		{"<ul><li>List</li></ul>", "\n- List\n"},
 		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List [link](xxx.com)\n"},
 		{"<ul><li>List <strong>strong</strong></li></ul>", "\n- List **strong**\n"},
