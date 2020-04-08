@@ -10,12 +10,12 @@ func TestNewH2MD(t *testing.T) {
 		text   string
 		expect string
 	}{
-		{"<h1>Title 1</h1>", "\n# Title 1"},
-		{"<h2>Title 2</h2>", "\n## Title 2"},
-		{"<h3>Title 3</h3>", "\n### Title 3"},
-		{"<h4>Title 4</h4>", "\n#### Title 4"},
-		{"<h5>Title 5</h5>", "\n##### Title 5"},
-		{"<h6>Title 6</h6>", "\n###### Title 6"},
+		{"<h1>Title 1</h1>", "\n# Title 1\n"},
+		{"<h2>Title 2</h2>", "\n## Title 2\n"},
+		{"<h3>Title 3</h3>", "\n### Title 3\n"},
+		{"<h4>Title 4</h4>", "\n#### Title 4\n"},
+		{"<h5>Title 5</h5>", "\n##### Title 5\n"},
+		{"<h6>Title 6</h6>", "\n###### Title 6\n"},
 
 		{"<ul><li>List</li></ul>", "\n- List\n"},
 		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List [link](xxx.com)\n"},

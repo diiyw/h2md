@@ -92,12 +92,13 @@ func (h *H2MD) Text() string {
 			case "h1", "h2", "h3", "h4", "h5", "h6":
 				buf.WriteString("\n")
 				j, _ := strconv.Atoi(n.Data[1:])
-				title := ""
-				for i := 0; i < j; i++ {
-					title += "#"
-				}
-				buf.WriteString(title)
+				buf.WriteString(strings.Repeat("#", j))
 				buf.WriteString(" ")
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					f(c)
+				}
+				n = n.NextSibling
+				buf.WriteString("\n")
 			case "img":
 				data := "![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")"
 				buf.WriteString(data)
