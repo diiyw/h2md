@@ -10,33 +10,56 @@ import (
 // H2MD H2MD struct
 type H2MD struct {
 	*html.Node
-	replacer map[string]func(val string, n *html.Node) string
+	ulN          int
+	blockquoteN  int
+	tdN          int
+	tableSpliced bool
+	skipNewline  bool
+	replacers    map[string]CustomReplacer
 }
+
+type CustomReplacer func(val string, n *html.Node) string
 
 // NewH2MD create H2MD with html text
 func NewH2MD(htmlText string) (*H2MD, error) {
 	node, err := html.Parse(strings.NewReader(htmlText))
 	if err == nil {
-		return &H2MD{node, make(map[string]func(val string, n *html.Node) string)}, nil
+		return &H2MD{
+			Node:         node,
+			ulN:          -1,
+			blockquoteN:  0,
+			tdN:          0,
+			tableSpliced: false,
+			skipNewline:  true,
+			replacers:    make(map[string]CustomReplacer),
+		}, nil
 	}
 	return nil, err
 }
 
 //NewH2MDFromNode create H2MD with html node
 func NewH2MDFromNode(node *html.Node) (*H2MD, error) {
-	return &H2MD{node, make(map[string]func(val string, n *html.Node) string)}, nil
+	return &H2MD{
+		Node:         node,
+		ulN:          -1,
+		blockquoteN:  0,
+		tdN:          0,
+		tableSpliced: false,
+		skipNewline:  true,
+		replacers:    make(map[string]CustomReplacer),
+	}, nil
 }
 
 // Replace Replace element attribute value
 func (h *H2MD) Replace(attr string, r func(val string, n *html.Node) string) {
-	h.replacer[attr] = r
+	h.replacers[attr] = r
 }
 
 // Attr Return the element attribute
 func (h *H2MD) Attr(name string, n *html.Node) string {
 	for _, attr := range n.Attr {
 		if name == attr.Key {
-			if r, ok := h.replacer[name]; ok {
+			if r, ok := h.replacers[name]; ok {
 				return r(attr.Val, n)
 			}
 			return attr.Val
@@ -51,60 +74,54 @@ func (h *H2MD) Text() string {
 
 	var f func(*html.Node)
 
-	var (
-		ulLevel         = -1
-		blockquoteLevel = 0
-		tdLevel         = 0
-		tableSpited     = false
-		skipNewline     = true
-	)
-
 	f = func(n *html.Node) {
+
+		var parse = func(tag string, single bool) {
+			buf.WriteString(tag)
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				f(c)
+			}
+			if n.LastChild != nil {
+				n = n.LastChild.NextSibling
+			}
+			if !single {
+				buf.WriteString(tag)
+			}
+		}
 		if n.Type == html.TextNode {
-			if skipNewline {
+			if h.skipNewline {
 				n.Data = strings.Trim(n.Data, "\n")
 			}
 			buf.WriteString(n.Data)
 		}
 		if n.Type == html.ElementNode {
 			switch n.Data {
-			case "a":
-				if n.FirstChild != nil {
-					buf.WriteString("[" + n.FirstChild.Data + "](" + h.Attr("href", n) + ")")
-				}
-				n = n.NextSibling
-			case "i":
-				if n.FirstChild != nil {
-					buf.WriteString("*" + n.FirstChild.Data + "*")
-				}
-				n = n.NextSibling
 			case "hr":
-				buf.WriteString("---\n")
-			case "strong", "b":
-				buf.WriteString("**")
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
+				buf.WriteString("\n---\n")
+			case "a":
+				if c := n.FirstChild; c != nil {
+					buf.WriteString("[" + c.Data + "](" + h.Attr("href", n) + ")")
+					n = c
 				}
-				n = n.LastChild
-				buf.WriteString("**")
+			case "img":
+				if n.Parent != nil && n.Parent.Data == "\n" {
+					buf.WriteString("\n")
+				}
+				buf.WriteString("![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")")
 			case "del":
-				buf.WriteString("~~" + n.Data + "~~")
+				parse("~~", false)
+			case "i":
+				parse("*", false)
+			case "strong", "b":
+				parse("**", false)
 			case "h1", "h2", "h3", "h4", "h5", "h6":
 				buf.WriteString("\n")
 				j, _ := strconv.Atoi(n.Data[1:])
-				buf.WriteString(strings.Repeat("#", j))
-				buf.WriteString(" ")
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
-				}
-				n = n.NextSibling
+				h.skipNewline = true
+				parse(strings.Repeat("#", j)+" ", true)
 				buf.WriteString("\n")
-			case "img":
-				data := "![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")"
-				buf.WriteString(data)
 			case "code":
-				buf.WriteString("```")
-				skipNewline = false
+				h.skipNewline = false
 				lang := h.Attr("class", n)
 				var newline = ""
 				if lang == "" && n.Parent != nil && n.Parent.Data == "pre" {
@@ -118,67 +135,50 @@ func (h *H2MD) Text() string {
 				if lang != "" {
 					newline = "\n"
 				}
+				buf.WriteString(newline)
+				buf.WriteString("```")
 				buf.WriteString(lang)
 				buf.WriteString(newline)
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
-				}
-				n = n.NextSibling
-				skipNewline = true
-				buf.WriteString(newline + "```" + newline)
+				parse("", true)
+				buf.WriteString(newline)
+				buf.WriteString("```")
 			case "ul", "ol":
-				ulLevel++
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
-				}
-				n = n.NextSibling
-				ulLevel--
-				buf.WriteString("\n")
+				h.ulN++
+				parse("", true)
+				h.ulN--
 			case "li":
+				h.skipNewline = true
 				buf.WriteString("\n")
-				if ulLevel > 0 {
-					buf.WriteString(strings.Repeat("	", ulLevel))
+				if h.ulN > 0 {
+					buf.WriteString(strings.Repeat("	", h.ulN))
 				}
-				buf.WriteString("- ")
+				parse("- ", true)
 			case "blockquote":
-				blockquoteLevel++
+				h.skipNewline = true
+				h.blockquoteN++
 				buf.WriteString("\n")
-				buf.WriteString(strings.Repeat(">", blockquoteLevel))
-				buf.WriteString(" ")
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
-				}
-				n = n.NextSibling
-				blockquoteLevel--
-				if blockquoteLevel == 0 {
-					buf.WriteString("\n")
-				}
+				parse(strings.Repeat(">", h.blockquoteN)+" ", true)
+				h.blockquoteN--
+				h.skipNewline = false
 			case "tr":
-				if tdLevel > 0 && !tableSpited {
+				if h.tdN > 0 && !h.tableSpliced {
 					buf.WriteString("\n| ")
-					buf.WriteString(strings.Repeat("---- | ", tdLevel))
-					tdLevel = 0
-					tableSpited = true
+					buf.WriteString(strings.Repeat("---- | ", h.tdN))
+					h.tdN = 0
+					h.tableSpliced = true
 				}
 				buf.WriteString("\n| ")
 			case "td", "th":
-				for c := n.FirstChild; c != nil; c = c.NextSibling {
-					f(c)
-				}
-				n = n.LastChild
-				tdLevel++
+				parse("", true)
 				buf.WriteString(" | ")
+				h.tdN++
 			case "pre":
-				buf.WriteString("\n")
 				if n.FirstChild != nil && n.FirstChild.Data != "code" {
-					skipNewline = false
-					buf.WriteString("```\n")
-					for c := n.FirstChild; c != nil; c = c.NextSibling {
-						f(c)
-					}
-					n = n.NextSibling
-					skipNewline = true
-					buf.WriteString("\n```\n")
+					parse("\n```\n", false)
+				}
+			case "p":
+				if !h.skipNewline {
+					buf.WriteString("\n")
 				}
 			}
 		}
