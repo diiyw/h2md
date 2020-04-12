@@ -1,8 +1,10 @@
 package h2md
 
 import (
+	"bufio"
 	"bytes"
 	"golang.org/x/net/html"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -15,10 +17,10 @@ type H2MD struct {
 	tdN          int
 	tableSpliced bool
 	skipNewline  bool
-	replacers    map[string]CustomReplacer
+	replacers    map[string]Replacer
 }
 
-type CustomReplacer func(val string, n *html.Node) string
+type Replacer func(val string, n *html.Node) string
 
 // NewH2MD create H2MD with html text
 func NewH2MD(htmlText string) (*H2MD, error) {
@@ -31,7 +33,7 @@ func NewH2MD(htmlText string) (*H2MD, error) {
 			tdN:          0,
 			tableSpliced: false,
 			skipNewline:  true,
-			replacers:    make(map[string]CustomReplacer),
+			replacers:    make(map[string]Replacer),
 		}, nil
 	}
 	return nil, err
@@ -46,12 +48,12 @@ func NewH2MDFromNode(node *html.Node) (*H2MD, error) {
 		tdN:          0,
 		tableSpliced: false,
 		skipNewline:  true,
-		replacers:    make(map[string]CustomReplacer),
+		replacers:    make(map[string]Replacer),
 	}, nil
 }
 
 // Replace Replace element attribute value
-func (h *H2MD) Replace(attr string, r func(val string, n *html.Node) string) {
+func (h *H2MD) Replace(attr string, r Replacer) {
 	h.replacers[attr] = r
 }
 
@@ -90,7 +92,7 @@ func (h *H2MD) Text() string {
 		}
 		if n.Type == html.TextNode {
 			if h.skipNewline {
-				n.Data = strings.Trim(n.Data, "\n")
+				n.Data = strings.TrimSpace(n.Data)
 			}
 			buf.WriteString(n.Data)
 		}
@@ -104,10 +106,13 @@ func (h *H2MD) Text() string {
 					n = c
 				}
 			case "img":
-				if n.Parent != nil && n.Parent.Data == "\n" {
+				if n.Parent != nil && n.Parent.Data == "p" {
 					buf.WriteString("\n")
 				}
 				buf.WriteString("![" + h.Attr("alt", n) + "](" + h.Attr("src", n) + ")")
+				if n.Parent != nil && n.Parent.Data == "p" {
+					buf.WriteString("\n")
+				}
 			case "del":
 				parse("~~", false)
 			case "i":
@@ -124,15 +129,19 @@ func (h *H2MD) Text() string {
 				h.skipNewline = false
 				lang := h.Attr("class", n)
 				var newline = ""
-				if lang == "" && n.Parent != nil && n.Parent.Data == "pre" {
-					lang = h.Attr("class", n.Parent)
+				if n.Parent != nil && n.Parent.Data == "pre" {
+					buf.WriteString("\n")
+					if lang == "" {
+						lang = h.Attr("class", n.Parent)
+					}
 					newline = "\n"
 				}
-				lang = strings.ReplaceAll(lang, "hljs ", "")
-				lang = strings.ReplaceAll(lang, "highlight ", "")
+				lang = strings.ReplaceAll(lang, "hljs", "")
+				lang = strings.ReplaceAll(lang, "highlight", "")
 				lang = strings.ReplaceAll(lang, "highlight-source-", "")
 				lang = strings.ReplaceAll(lang, "language-", "")
 				if lang != "" {
+					lang = strings.Split(lang, " ")[0]
 					newline = "\n"
 				}
 				buf.WriteString(newline)
@@ -156,9 +165,22 @@ func (h *H2MD) Text() string {
 			case "blockquote":
 				h.skipNewline = true
 				h.blockquoteN++
-				buf.WriteString("\n")
-				parse(strings.Repeat(">", h.blockquoteN)+" ", true)
+				var prevBuf bytes.Buffer
+				prevBuf.Write(buf.Bytes())
+				buf.Reset()
+				parse("", true)
 				h.blockquoteN--
+				br := bufio.NewReader(&buf)
+				for {
+					a, _, c := br.ReadLine()
+					if c == io.EOF {
+						break
+					}
+					prevBuf.WriteString("\n> ")
+					prevBuf.Write(a)
+				}
+				buf.Reset()
+				buf.Write(prevBuf.Bytes())
 				h.skipNewline = false
 			case "tr":
 				if h.tdN > 0 && !h.tableSpliced {
@@ -173,13 +195,17 @@ func (h *H2MD) Text() string {
 				buf.WriteString(" | ")
 				h.tdN++
 			case "pre":
+				h.skipNewline = false
 				if n.FirstChild != nil && n.FirstChild.Data != "code" {
 					parse("\n```\n", false)
 				}
+				h.skipNewline = true
 			case "p":
 				if !h.skipNewline {
 					buf.WriteString("\n")
 				}
+			case "br":
+				buf.WriteString("\n")
 			}
 		}
 		if n != nil && n.FirstChild != nil {

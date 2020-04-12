@@ -10,13 +10,13 @@ func TestNewH2MD(t *testing.T) {
 		text   string
 		expect string
 	}{
-		{"<h1>Title 1</h1>", "\n# Title 1"},
-		{"<h2>Title 2</h2>", "\n## Title 2"},
-		{"<h3>Title 3</h3>", "\n### Title 3"},
-		{"<h4>Title 4</h4>", "\n#### Title 4"},
-		{"<h5>Title 5</h5>", "\n##### Title 5"},
-		{"<h6>Title 6</h6>", "\n###### Title 6"},
-		{`<h1><strong>1</strong><strong>、前言</strong></h1>`, "\n# **1****、前言**"},
+		{"<h1>Title 1</h1>", "\n# Title 1\n"},
+		{"<h2>Title 2</h2>", "\n## Title 2\n"},
+		{"<h3>Title 3</h3>", "\n### Title 3\n"},
+		{"<h4>Title 4</h4>", "\n#### Title 4\n"},
+		{"<h5>Title 5</h5>", "\n##### Title 5\n"},
+		{"<h6>Title 6</h6>", "\n###### Title 6\n"},
+		{`<h1><strong>1</strong><strong>、前言</strong></h1>`, "\n# **1****、前言**\n"},
 		{"<ul><li>List</li></ul>", "\n- List"},
 		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List [link](xxx.com)"},
 		{"<ul><li>List <strong>strong</strong></li></ul>", "\n- List **strong**"},
@@ -29,7 +29,7 @@ func TestNewH2MD(t *testing.T) {
 		{"<b>List</b>", "**List**"},
 		{"<strong>strong</strong>", "**strong**"},
 		{"<i>List</i>", "*List*"},
-		{"<hr>", "---\n"},
+		{"<hr>", "\n---\n"},
 		{"<code>code</code>", "```code```"},
 		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "\n```javascript\ncode\n```"},
 		{"<blockquote>blockquote</blockquote>", "\n> blockquote"},
@@ -130,6 +130,24 @@ func TestParseTable(t *testing.T) {
 </tr>
 </tbody>
 </table>`
+	h, err := NewH2MD(table)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(h.Text())
+}
+
+func TestParseBlockquote(t *testing.T) {
+	var table = `<blockquote>
+<p>block1<br>
+block1</p>
+<blockquote>
+<p>block2</p>
+<blockquote>
+<p>block3</p>
+</blockquote>
+</blockquote>
+</blockquote>`
 	h, err := NewH2MD(table)
 	if err != nil {
 		t.Error(err)
