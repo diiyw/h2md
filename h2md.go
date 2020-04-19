@@ -191,8 +191,10 @@ func (h *H2MD) Text() string {
 				}
 				buf.WriteString("\n| ")
 			case "td", "th":
+				h.skipNewline = !h.skipNewline
 				parse("", true)
 				buf.WriteString(" | ")
+				h.skipNewline = !h.skipNewline
 				h.tdN++
 			case "pre":
 				h.skipNewline = false
