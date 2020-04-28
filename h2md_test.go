@@ -59,36 +59,120 @@ func TestNewH2MD(t *testing.T) {
 }
 
 func TestParseTable(t *testing.T) {
-	var table = `<table class="table table-bordered table-striped">
-<tbody><tr>
-<th>type</th>
-<th>用途</th>
+	var table = `<table>
+<thead>
+<tr>
+<th>CODE</th>
+<th>HTTP Operation</th>
+<th>Body Contents</th>
+<th>Decription</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>GET,PUT</td>
+<td>资源</td>
+<td>操作成功</td>
 </tr>
 <tr>
-<td>Data api</td>
-<td>查询文档（能被输出的规则、虚拟文档等）</td>
+<td>201</td>
+<td>POST</td>
+<td>资源,元数据</td>
+<td>对象创建成功</td>
 </tr>
 <tr>
-<td>Policy api</td>
-<td>查询策略</td>
+<td>202</td>
+<td>POST,PUT,DELETE,PATCH</td>
+<td>N/A</td>
+<td>请求已被接受</td>
 </tr>
 <tr>
-<td>Query api</td>
-<td>执行命令</td>
+<td>204</td>
+<td>DELETE,PUT,PATCH</td>
+<td>N/A</td>
+<td>操作已经执行成功，但是没有返回结果</td>
 </tr>
 <tr>
-<td>Compile api</td>
-<td>执行部分查询计算（<code>partial evaluate query</code>）</td>
+<td>301</td>
+<td>GET</td>
+<td>link</td>
+<td>资源已被移除</td>
 </tr>
 <tr>
-<td>Health api</td>
-<td>健康检查</td>
+<td>303</td>
+<td>GET</td>
+<td>link</td>
+<td>重定向</td>
 </tr>
 <tr>
-<td>Metric api</td>
-<td>指标统计（<code>prometheus</code>格式)</td>
+<td>304</td>
+<td>GET</td>
+<td>N/A</td>
+<td>资源没有被修改</td>
 </tr>
-</tbody></table>`
+<tr>
+<td>400</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>参数列表错误(缺少，格式不匹配)</td>
+</tr>
+<tr>
+<td>401</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>未授权</td>
+</tr>
+<tr>
+<td>403</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>访问受限，授权过期</td>
+</tr>
+<tr>
+<td>404</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>资源，服务未找到</td>
+</tr>
+<tr>
+<td>405</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>不允许的HTTP方法</td>
+</tr>
+<tr>
+<td>409</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>资源冲突，或资源被锁定</td>
+</tr>
+<tr>
+<td>415</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>不支持的数据(媒体)类型</td>
+</tr>
+<tr>
+<td>429</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>请求过多被限制</td>
+</tr>
+<tr>
+<td>500</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>系统内部错误</td>
+</tr>
+<tr>
+<td>501</td>
+<td>GET,POST,PUT,DELETE,PATCH</td>
+<td>错误提示(消息)</td>
+<td>接口未实现</td>
+</tr>
+</tbody>
+</table>`
 	h, err := NewH2MD(table)
 	if err != nil {
 		t.Error(err)
