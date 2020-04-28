@@ -183,12 +183,14 @@ func (h *H2MD) Text() string {
 				buf.Write(prevBuf.Bytes())
 				h.skipNewline = false
 			case "tr":
+				h.skipNewline = true
 				if h.tdN > 0 && !h.tableSpliced {
 					buf.WriteString("\n| ")
 					buf.WriteString(strings.Repeat("---- | ", h.tdN))
 					h.tdN = 0
 					h.tableSpliced = true
 				}
+				h.skipNewline = true
 				buf.WriteString("\n| ")
 			case "td", "th":
 				h.skipNewline = false
