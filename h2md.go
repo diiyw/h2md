@@ -3,7 +3,6 @@ package h2md
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"golang.org/x/net/html"
 	"io"
 	"strconv"
@@ -147,7 +146,6 @@ func (h *H2MD) Text() string {
 					lang = strings.Split(lang, " ")[0]
 					newline = "\n"
 				}
-				fmt.Println(lang)
 				buf.WriteString(newline)
 				buf.WriteString("```")
 				buf.WriteString(lang)
