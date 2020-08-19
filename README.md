@@ -2,7 +2,7 @@
 
 A tool to help you translate html 2 markdown.
  
-几乎完美的将html转换成markdown格式的小工具,支持表格、代码块的转换
+几乎完美的将html转换成markdown格式的小工具，不使用正则、支持表格、代码块的转换
 
 ## Require
 

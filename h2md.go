@@ -3,6 +3,7 @@ package h2md
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"io"
 	"strconv"
@@ -137,13 +138,16 @@ func (h *H2MD) Text() string {
 					newline = "\n"
 				}
 				lang = strings.ReplaceAll(lang, "hljs", "")
+				lang = strings.ReplaceAll(lang, "prism", "")
 				lang = strings.ReplaceAll(lang, "highlight", "")
 				lang = strings.ReplaceAll(lang, "highlight-source-", "")
 				lang = strings.ReplaceAll(lang, "language-", "")
+				lang = strings.TrimSpace(lang)
 				if lang != "" {
 					lang = strings.Split(lang, " ")[0]
 					newline = "\n"
 				}
+				fmt.Println(lang)
 				buf.WriteString(newline)
 				buf.WriteString("```")
 				buf.WriteString(lang)

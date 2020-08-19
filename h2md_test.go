@@ -496,3 +496,13 @@ GET /localhost/task
 	}
 	fmt.Println(h.Text())
 }
+
+func TestNewH2MDPrism(t *testing.T) {
+	html := `<pre class="prettyprint"><code class="prism language-javascript has-numbering" onclick="mdcp.signin(event)" style="position: unset;"><span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<div class="hljs-button signin" data-title="登录后复制"></div></code><ul class="pre-numbering" style=""><li style="color: rgb(153, 153, 153);">1</li></ul></pre>`
+	h, err := NewH2MD(html)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(h.Text())
+}
