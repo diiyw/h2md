@@ -18,8 +18,8 @@ func TestNewH2MD(t *testing.T) {
 		{"<h6>Title 6</h6>", "\n###### Title 6\n"},
 		{`<h1><strong>1</strong><strong>、前言</strong></h1>`, "\n# **1****、前言**\n"},
 		{"<ul><li>List</li></ul>", "\n- List"},
-		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List [link](xxx.com)"},
-		{"<ul><li>List <strong>strong</strong></li></ul>", "\n- List **strong**"},
+		{"<ul><li>List <a href=\"xxx.com\">link</a></li></ul>", "\n- List[link](xxx.com)"},
+		{"<ul><li>List <strong>strong</strong></li></ul>", "\n- List**strong**"},
 
 		{"<ul><li>List<ul><li>sub list</li></ul></li></ul>", "\n- List\n	- sub list"},
 		{
@@ -31,9 +31,9 @@ func TestNewH2MD(t *testing.T) {
 		{"<i>List</i>", "*List*"},
 		{"<hr>", "\n---\n"},
 		{"<code>code</code>", "```code```"},
-		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "\n```javascript\ncode\n```"},
+		{"<pre class=\"hljs javascript\"><code>code</code></pre>", "\n\n```javascript\ncode\n```"},
 		{"<blockquote>blockquote</blockquote>", "\n> blockquote"},
-		{"<blockquote>blockquote<blockquote>sub blockquote</blockquote></blockquote>", "\n> blockquote\n>> sub blockquote"},
+		{"<blockquote>blockquote<blockquote>sub blockquote</blockquote></blockquote>", "\n> blockquote\n> > sub blockquote"},
 
 		{"<a href=\"xxx.com\">link</a>", "[link](xxx.com)"},
 		{"<img src=\"xxx.jpg\" alt=\"image\"/>", "![image](xxx.jpg)"},
